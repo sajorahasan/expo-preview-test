@@ -1,0 +1,8 @@
+node_modules
+__tests__/
+.vscode
+.expo
+ios
+android
+package.json
+.eslintignore

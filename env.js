@@ -12,34 +12,34 @@
  * we use dotenv to load the correct variables from the .env file based on the APP_ENV variable (default is development)
  * APP_ENV is passed as an inline variable while executing the command, for example: APP_ENV=staging bun build:android
  */
-const path = require("path");
-const z = require("zod");
+const z = require('zod')
 
-const packageJSON = require("./package.json");
-const APP_ENV = process.env.APP_ENV ?? "development";
+const packageJSON = require('./package.json')
+const path = require('path')
+const APP_ENV = process.env.APP_ENV ?? 'development'
 // eslint-disable-next-line no-undef
-const envPath = path.resolve(__dirname, `.env.${APP_ENV}`);
+const envPath = path.resolve(__dirname, `.env.${APP_ENV}`)
 
-require("dotenv").config({
+require('dotenv').config({
   path: envPath,
-});
+})
 
 /**
  * 2nd part: Define some static variables for the app
  * Such as: bundle id, package name, app name.
  *
  * You can add them to the .env file but we think it's better to keep them here as as we use prefix to generate this values based on the APP_ENV
- * for example: if the APP_ENV is staging, the bundle id will be com.sgs.app.staging
+ * for example: if the APP_ENV is staging, the bundle id will be com.anonymous.app
  */
 
 // TODO: Replace these values with your own
 
-const BUNDLE_ID = "com.anonymous.app"; // ios bundle id
-const PACKAGE = "com.anonymous.app"; // android package name
-const NAME = "Anonymous"; // app name
-const EXPO_ACCOUNT_OWNER = "expo-owner"; // expo account owner
-const EAS_PROJECT_ID = "00000000-0000-0000-0000-000000000000"; // eas project id
-const SCHEME = "anonymous-app"; // app scheme
+const BUNDLE_ID = 'com.anonymous.app' // ios bundle id
+const PACKAGE = 'com.anonymous.app' // android package name
+const NAME = 'Anonymous' // app name
+const EXPO_ACCOUNT_OWNER = 'expo-owner' // expo account owner
+const EAS_PROJECT_ID = '00000000-0000-0000-0000-000000000000' // eas project id
+const SCHEME = 'anonymous' // app scheme
 
 /**
  * We declare a function withEnvSuffix that will add a suffix to the variable name based on the APP_ENV
@@ -49,8 +49,8 @@ const SCHEME = "anonymous-app"; // app scheme
  */
 
 const withEnvSuffix = (name) => {
-  return APP_ENV === "production" ? name : `${name}.${APP_ENV}`;
-};
+  return APP_ENV === 'production' ? name : `${name}.${APP_ENV}`
+}
 
 /**
  * 2nd part: Define your env variables schema
@@ -71,7 +71,7 @@ const withEnvSuffix = (name) => {
  */
 
 const client = z.object({
-  APP_ENV: z.enum(["development", "staging", "production"]),
+  APP_ENV: z.enum(['development', 'staging', 'production']),
   NAME: z.string(),
   SCHEME: z.string(),
   BUNDLE_ID: z.string(),
@@ -79,15 +79,19 @@ const client = z.object({
   VERSION: z.string(),
 
   // ADD YOUR CLIENT ENV VARS HERE
+  API_VERSION: z.string(),
   API_URL: z.string(),
   BASE_URL: z.string(),
-});
+  VAR_NUMBER: z.number(),
+  VAR_BOOL: z.boolean(),
+})
 
 const buildTime = z.object({
   EXPO_ACCOUNT_OWNER: z.string(),
   EAS_PROJECT_ID: z.string(),
   // ADD YOUR BUILD TIME ENV VARS HERE
-});
+  SECRET_KEY: z.string(),
+})
 
 /**
  * @type {Record<keyof z.infer<typeof client> , unknown>}
@@ -96,14 +100,17 @@ const _clientEnv = {
   APP_ENV,
   NAME,
   SCHEME,
-  BUNDLE_ID, // use withEnvSuffix(BUNDLE_ID) to add a env suffix
-  PACKAGE, // use withEnvSuffix(PACKAGE) to add a env suffix
+  BUNDLE_ID, // use withEnvSuffix(BUNDLE_ID) if you want to add a suffix to the variable name based on the APP_ENV
+  PACKAGE, // use withEnvSuffix(PACKAGE) if you want to add a suffix to the variable name based on the APP_ENV
   VERSION: packageJSON.version,
 
   // ADD YOUR ENV VARS HERE TOO
+  API_VERSION: process.env.API_VERSION,
   API_URL: process.env.API_URL,
   BASE_URL: process.env.BASE_URL,
-};
+  VAR_NUMBER: Number(process.env.VAR_NUMBER),
+  VAR_BOOL: process.env.VAR_BOOL === 'true',
+}
 
 /**
  * @type {Record<keyof z.infer<typeof buildTime> , unknown>}
@@ -112,7 +119,8 @@ const _buildTimeEnv = {
   EXPO_ACCOUNT_OWNER,
   EAS_PROJECT_ID,
   // ADD YOUR ENV VARS HERE TOO
-};
+  SECRET_KEY: process.env.SECRET_KEY,
+}
 
 /**
  * 3rd part: Merge and Validate your env variables
@@ -123,27 +131,27 @@ const _buildTimeEnv = {
 const _env = {
   ..._clientEnv,
   ..._buildTimeEnv,
-};
+}
 
-const merged = buildTime.merge(client);
-const parsed = merged.safeParse(_env);
+const merged = buildTime.merge(client)
+const parsed = merged.safeParse(_env)
 
 if (parsed.success === false) {
   console.error(
-    "❌ Invalid environment variables:",
+    '❌ Invalid environment variables:',
     parsed.error.flatten().fieldErrors,
 
     `\n❌ Missing variables in .env.${APP_ENV} file, Make sure all required variables are defined in the .env.${APP_ENV} file.`,
-    `\n💡 Tip: If you recently updated the .env.${APP_ENV} file and the error still persists, try restarting the server with the -cc flag to clear the cache.`
-  );
-  throw new Error("Invalid environment variables, Check terminal for more details ");
+    `\n💡 Tip: If you recently updated the .env.${APP_ENV} file and the error still persists, try restarting the server with the -c flag to clear the cache.`,
+  )
+  throw new Error('Invalid environment variables, Check terminal for more details ')
 }
 
-const Env = parsed.data;
-const ClientEnv = client.parse(_clientEnv);
+const Env = parsed.data
+const ClientEnv = client.parse(_clientEnv)
 
 module.exports = {
   Env,
   ClientEnv,
   withEnvSuffix,
-};
+}
